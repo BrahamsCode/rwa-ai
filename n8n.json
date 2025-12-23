@@ -1,0 +1,152 @@
+{
+  "name": "Sistema de Pedidos por Voz - Restaurant",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "voice-order",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-voice-order",
+      "name": "Webhook - Recibir Pedido",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "orders",
+        "columns": "customer_name, items, total_amount, table_number, created_at",
+        "additionalFields": {}
+      },
+      "id": "postgres-insert",
+      "name": "PostgreSQL - Guardar Pedido",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "PostgreSQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar el pedido recibido\nconst orderData = $input.item.json.body;\n\nconst items = orderData.items.map(item => \n  `${item.quantity}x ${item.name} - $${item.subtotal}`\n).join(', ');\n\nreturn {\n  customer_name: 'Cliente Voz',\n  items: items,\n  total_amount: orderData.total,\n  table_number: orderData.table,\n  created_at: new Date().toISOString(),\n  order_details: orderData\n};"
+      },
+      "id": "code-process",
+      "name": "Procesar Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"order_id\": $json.id, \"message\": \"Pedido recibido en cocina\" } }}"
+      },
+      "id": "respond-webhook",
+      "name": "Responder al Cliente",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "TU_CHAT_ID_TELEGRAM",
+        "text": "=🔔 *NUEVO PEDIDO*\n\n📍 Mesa: {{ $json.table_number }}\n💰 Total: ${{ $json.total_amount }}\n\n📋 Items:\n{{ $json.items }}\n\n⏰ {{ $now.toFormat('HH:mm:ss') }}"
+      },
+      "id": "telegram-notification",
+      "name": "Telegram - Notificar Cocina",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [650, 450],
+      "credentials": {
+        "telegramApi": {
+          "id": "2",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/VOICE_ID",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "elevenlabsApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "=Nuevo pedido para mesa {{ $json.table_number }}. Total: {{ $json.total_amount }} dólares."
+            },
+            {
+              "name": "model_id",
+              "value": "eleven_monolingual_v1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "elevenlabs-tts",
+      "name": "ElevenLabs - TTS Confirmación",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 600]
+    }
+  ],
+  "connections": {
+    "Webhook - Recibir Pedido": {
+      "main": [
+        [
+          {
+            "node": "Procesar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Datos": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Guardar Pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Guardar Pedido": {
+      "main": [
+        [
+          {
+            "node": "Responder al Cliente",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram - Notificar Cocina",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ElevenLabs - TTS Confirmación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "tags": [],
+  "pinData": {}
+}
