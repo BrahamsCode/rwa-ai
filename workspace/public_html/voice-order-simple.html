@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎤 Sistema de Pedidos por Voz - Restaurante</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .voice-btn {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 60px;
+            cursor: pointer;
+            margin: 30px auto;
+            display: block;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            position: relative;
+        }
+
+        .voice-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        }
+
+        .voice-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .voice-btn.listening {
+            animation: pulse 1.5s infinite;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 10px 30px rgba(245, 87, 108, 0.4);
+            }
+
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 15px 40px rgba(245, 87, 108, 0.8);
+            }
+        }
+
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+            color: #667eea;
+            font-weight: 600;
+            min-height: 30px;
+        }
+
+        .browser-support {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .browser-support.show {
+            display: block;
+        }
+
+        .transcript {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 100px;
+            color: #333;
+            font-size: 18px;
+            line-height: 1.6;
+            border: 2px solid #e9ecef;
+        }
+
+        .order-summary {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .order-summary.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .order-summary h3 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .order-item {
+            padding: 12px;
+            border-bottom: 1px solid #c8e6c9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: #1b5e20;
+        }
+
+        .item-price {
+            color: #2e7d32;
+            font-weight: 500;
+        }
+
+        .total {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1b5e20;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #4caf50;
+            text-align: right;
+        }
+
+        .menu {
+            background: #fff3e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .menu h3 {
+            color: #e65100;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .menu-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #ffe0b2;
+            align-items: center;
+        }
+
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .menu-item-name {
+            font-weight: 500;
+        }
+
+        .menu-item-price {
+            font-weight: 600;
+            color: #e65100;
+        }
+
+        .instructions {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 15px;
+            color: #1565c0;
+            line-height: 1.6;
+        }
+
+        .btn-confirm {
+            width: 100%;
+            padding: 18px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-confirm:hover:not(:disabled) {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-confirm:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-clear {
+            width: 100%;
+            padding: 12px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-clear:hover {
+            background: #d32f2f;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4);
+        }
+
+        .history {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .history-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+
+        .history-time {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🍕 Pedidos por Voz</h1>
+        <p class="subtitle">Presiona el micrófono y di tu pedido</p>
+
+        <div class="browser-support" id="browserWarning">
+            <strong>⚠️ Navegador no compatible</strong><br>
+            Este sistema requiere Chrome, Edge o Safari. Firefox no es compatible con reconocimiento de voz.
+        </div>
+
+        <div class="menu">
+            <h3>📋 Menú Disponible</h3>
+            <div class="menu-item">
+                <span class="menu-item-name">🍕 Pizza Margherita</span>
+                <span class="menu-item-price">$12.00</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-item-name">🍕 Pizza Pepperoni</span>
+                <span class="menu-item-price">$14.00</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-item-name">🍝 Pasta Carbonara</span>
+                <span class="menu-item-price">$15.00</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-item-name">🥗 Ensalada César</span>
+                <span class="menu-item-price">$8.00</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-item-name">🥤 Coca-Cola</span>
+                <span class="menu-item-price">$3.00</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-item-name">🥤 Sprite</span>
+                <span class="menu-item-price">$3.00</span>
+            </div>
+        </div>
+
+        <div class="instructions">
+            💡 <strong>Ejemplos de pedidos:</strong><br>
+            • "Quiero una pizza margherita para la mesa cinco"<br>
+            • "Dos pizzas pepperoni y una coca-cola mesa tres"<br>
+            • "Una pasta carbonara, dos sprites y una ensalada césar para la mesa siete"
+        </div>
+
+        <button class="voice-btn" id="voiceBtn" disabled>🎤</button>
+
+        <div class="status" id="status">Inicializando...</div>
+
+        <div class="transcript" id="transcript">
+            Aquí aparecerá lo que digas...
+        </div>
+
+        <div class="order-summary" id="orderSummary">
+            <h3>✅ Resumen del Pedido</h3>
+            <div id="orderItems"></div>
+            <div class="total" id="total"></div>
+            <button class="btn-confirm" id="confirmBtn">Confirmar Pedido</button>
+            <button class="btn-clear" id="clearBtn">Limpiar Pedido</button>
+        </div>
+
+        <div class="history" id="history" style="display: none;">
+            <h3>📜 Pedidos Confirmados</h3>
+            <div id="historyItems"></div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🚀 Iniciando sistema de pedidos por voz...');
+
+        // Configuración del menú con precios
+        const menu = {
+            'pizza margherita': { price: 12, name: 'Pizza Margherita', emoji: '🍕' },
+            'margherita': { price: 12, name: 'Pizza Margherita', emoji: '🍕' },
+            'pizza pepperoni': { price: 14, name: 'Pizza Pepperoni', emoji: '🍕' },
+            'pepperoni': { price: 14, name: 'Pizza Pepperoni', emoji: '🍕' },
+            'pasta carbonara': { price: 15, name: 'Pasta Carbonara', emoji: '🍝' },
+            'carbonara': { price: 15, name: 'Pasta Carbonara', emoji: '🍝' },
+            'pasta': { price: 15, name: 'Pasta Carbonara', emoji: '🍝' },
+            'ensalada cesar': { price: 8, name: 'Ensalada César', emoji: '🥗' },
+            'ensalada césar': { price: 8, name: 'Ensalada César', emoji: '🥗' },
+            'ensalada': { price: 8, name: 'Ensalada César', emoji: '🥗' },
+            'coca cola': { price: 3, name: 'Coca-Cola', emoji: '🥤' },
+            'coca-cola': { price: 3, name: 'Coca-Cola', emoji: '🥤' },
+            'coca': { price: 3, name: 'Coca-Cola', emoji: '🥤' },
+            'sprite': { price: 3, name: 'Sprite', emoji: '🥤' },
+            'fanta': { price: 3, name: 'Fanta', emoji: '🥤' }
+        };
+
+        let recognition;
+        let isListening = false;
+        let currentOrder = [];
+        let tableNumber = null;
+        let orderHistory = [];
+
+        // Elementos del DOM
+        const voiceBtn = document.getElementById('voiceBtn');
+        const status = document.getElementById('status');
+        const transcript = document.getElementById('transcript');
+        const orderSummary = document.getElementById('orderSummary');
+        const orderItems = document.getElementById('orderItems');
+        const total = document.getElementById('total');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const browserWarning = document.getElementById('browserWarning');
+        const history = document.getElementById('history');
+        const historyItems = document.getElementById('historyItems');
+
+        // Verificar compatibilidad del navegador
+        console.log('Verificando compatibilidad del navegador...');
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            console.log('✅ Navegador compatible con Web Speech API');
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+
+            // Configuración del reconocimiento de voz
+            recognition.lang = 'es-ES';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            console.log('Configuración de reconocimiento:', {
+                lang: recognition.lang,
+                continuous: recognition.continuous,
+                interimResults: recognition.interimResults
+            });
+
+            // Habilitar el botón
+            voiceBtn.disabled = false;
+            status.textContent = 'Listo - Presiona el micrófono para comenzar';
+            status.style.color = '#4caf50';
+
+            // Event listeners
+            voiceBtn.addEventListener('click', toggleListening);
+            confirmBtn.addEventListener('click', confirmOrder);
+            clearBtn.addEventListener('click', clearOrder);
+
+            // Eventos del reconocimiento de voz
+            recognition.onstart = () => {
+                console.log('🎤 Reconocimiento iniciado');
+                isListening = true;
+                voiceBtn.classList.add('listening');
+                status.textContent = '🎤 Escuchando... Habla ahora';
+                status.style.color = '#f5576c';
+            };
+
+            recognition.onresult = (event) => {
+                const result = event.results[0][0];
+                const text = result.transcript.toLowerCase();
+                const confidence = result.confidence;
+
+                console.log('📝 Texto reconocido:', text);
+                console.log('🎯 Confianza:', (confidence * 100).toFixed(1) + '%');
+
+                transcript.textContent = `"${text}" (${(confidence * 100).toFixed(0)}% confianza)`;
+                processOrder(text);
+            };
+
+            recognition.onend = () => {
+                console.log('⏹️ Reconocimiento finalizado');
+                isListening = false;
+                voiceBtn.classList.remove('listening');
+
+                if (currentOrder.length > 0) {
+                    status.textContent = '✅ Pedido agregado - Presiona para agregar más';
+                    status.style.color = '#4caf50';
+                } else {
+                    status.textContent = 'Presiona el micrófono para hacer un pedido';
+                    status.style.color = '#667eea';
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('❌ Error en reconocimiento:', event.error);
+
+                isListening = false;
+                voiceBtn.classList.remove('listening');
+
+                let errorMsg = 'Error: ';
+                switch (event.error) {
+                    case 'no-speech':
+                        errorMsg += 'No se detectó voz. Intenta de nuevo.';
+                        break;
+                    case 'audio-capture':
+                        errorMsg += 'No se pudo acceder al micrófono.';
+                        break;
+                    case 'not-allowed':
+                        errorMsg += 'Permiso de micrófono denegado.';
+                        break;
+                    case 'network':
+                        errorMsg += 'Error de red. Verifica tu conexión.';
+                        break;
+                    default:
+                        errorMsg += event.error;
+                }
+
+                status.textContent = '❌ ' + errorMsg;
+                status.style.color = '#f44336';
+            };
+
+        } else {
+            console.error('❌ Navegador no compatible');
+            status.textContent = '❌ Tu navegador no soporta reconocimiento de voz';
+            status.style.color = '#f44336';
+            voiceBtn.disabled = true;
+            browserWarning.classList.add('show');
+        }
+
+        function toggleListening() {
+            console.log('🔄 Toggle listening, estado actual:', isListening);
+            if (isListening) {
+                console.log('⏹️ Deteniendo reconocimiento...');
+                recognition.stop();
+            } else {
+                console.log('▶️ Iniciando reconocimiento...');
+                try {
+                    recognition.start();
+                } catch (error) {
+                    console.error('Error al iniciar reconocimiento:', error);
+                    status.textContent = '❌ Error al iniciar micrófono';
+                    status.style.color = '#f44336';
+                }
+            }
+        }
+
+        function processOrder(text) {
+            console.log('🔍 Procesando pedido:', text);
+
+            // Extraer número de mesa
+            const tablePatterns = [
+                /mesa\s+(\d+)/i,
+                /mesa\s+(uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)/i,
+                /para\s+la\s+mesa\s+(\d+)/i
+            ];
+
+            for (const pattern of tablePatterns) {
+                const tableMatch = text.match(pattern);
+                if (tableMatch) {
+                    const tableStr = tableMatch[1];
+                    // Convertir números en palabras a dígitos
+                    const numberWords = {
+                        'uno': '1', 'dos': '2', 'tres': '3', 'cuatro': '4',
+                        'cinco': '5', 'seis': '6', 'siete': '7', 'ocho': '8',
+                        'nueve': '9', 'diez': '10'
+                    };
+                    tableNumber = numberWords[tableStr.toLowerCase()] || tableStr;
+                    console.log('📍 Mesa detectada:', tableNumber);
+                    break;
+                }
+            }
+
+            // Buscar items del menú en el texto
+            let foundItems = [];
+
+            for (const [key, item] of Object.entries(menu)) {
+                if (text.includes(key)) {
+                    console.log('🍽️ Item encontrado:', item.name);
+
+                    // Buscar cantidad
+                    let quantity = 1;
+
+                    // Patrones de cantidad
+                    const quantityPatterns = [
+                        new RegExp(`(\\d+)\\s+${key}`, 'i'),
+                        new RegExp(`${key}\\s+(\\d+)`, 'i'),
+                        new RegExp(`(una?)\\s+${key}`, 'i'),
+                        new RegExp(`(dos)\\s+${key}`, 'i'),
+                        new RegExp(`(tres)\\s+${key}`, 'i'),
+                        new RegExp(`(cuatro)\\s+${key}`, 'i'),
+                        new RegExp(`(cinco)\\s+${key}`, 'i')
+                    ];
+
+                    for (const pattern of quantityPatterns) {
+                        const match = text.match(pattern);
+                        if (match) {
+                            const qtyStr = match[1].toLowerCase();
+                            const numberWords = {
+                                'una': 1, 'uno': 1, 'dos': 2, 'tres': 3,
+                                'cuatro': 4, 'cinco': 5
+                            };
+                            quantity = numberWords[qtyStr] || parseInt(qtyStr) || 1;
+                            console.log('🔢 Cantidad detectada:', quantity);
+                            break;
+                        }
+                    }
+
+                    foundItems.push({
+                        name: item.name,
+                        emoji: item.emoji,
+                        quantity: quantity,
+                        price: item.price,
+                        subtotal: item.price * quantity
+                    });
+
+                    // Remover el item del texto para evitar duplicados
+                    text = text.replace(new RegExp(key, 'gi'), '');
+                }
+            }
+
+            console.log('✅ Items procesados:', foundItems.length);
+
+            if (foundItems.length > 0) {
+                currentOrder = [...currentOrder, ...foundItems];
+                displayOrder();
+                status.textContent = `✅ ${foundItems.length} item(s) agregado(s)`;
+                status.style.color = '#4caf50';
+            } else {
+                status.textContent = '⚠️ No encontré items del menú. Intenta de nuevo.';
+                status.style.color = '#ff9800';
+                console.warn('⚠️ No se encontraron items en:', text);
+            }
+        }
+
+        function displayOrder() {
+            if (currentOrder.length === 0) {
+                orderSummary.classList.remove('show');
+                return;
+            }
+
+            console.log('📊 Mostrando pedido:', currentOrder);
+
+            let html = '';
+            let totalAmount = 0;
+
+            // Agrupar items iguales
+            const groupedOrder = {};
+            currentOrder.forEach(item => {
+                const key = item.name;
+                if (groupedOrder[key]) {
+                    groupedOrder[key].quantity += item.quantity;
+                    groupedOrder[key].subtotal += item.subtotal;
+                } else {
+                    groupedOrder[key] = { ...item };
+                }
+            });
+
+            Object.values(groupedOrder).forEach(item => {
+                html += `
+                    <div class="order-item">
+                        <span class="item-name">${item.emoji} ${item.quantity}x ${item.name}</span>
+                        <span class="item-price">$${item.subtotal.toFixed(2)}</span>
+                    </div>
+                `;
+                totalAmount += item.subtotal;
+            });
+
+            orderItems.innerHTML = html;
+
+            let totalText = `TOTAL: $${totalAmount.toFixed(2)}`;
+            if (tableNumber) {
+                totalText += ` • Mesa #${tableNumber}`;
+            }
+            total.textContent = totalText;
+
+            orderSummary.classList.add('show');
+        }
+
+        function confirmOrder() {
+            if (currentOrder.length === 0) return;
+
+            const orderData = {
+                table: tableNumber || 'Sin especificar',
+                items: currentOrder,
+                total: currentOrder.reduce((sum, item) => sum + item.subtotal, 0),
+                timestamp: new Date()
+            };
+
+            console.log('✅ Pedido confirmado:', orderData);
+
+            // Guardar en historial
+            orderHistory.push(orderData);
+            updateHistory();
+
+            // Mostrar alerta
+            let itemsList = Object.values(currentOrder.reduce((acc, item) => {
+                const key = item.name;
+                if (acc[key]) {
+                    acc[key].quantity += item.quantity;
+                } else {
+                    acc[key] = { ...item };
+                }
+                return acc;
+            }, {})).map(item => `  • ${item.quantity}x ${item.name} - $${item.subtotal.toFixed(2)}`).join('\n');
+
+            alert(`✅ PEDIDO CONFIRMADO!\n\nMesa: ${orderData.table}\n\n${itemsList}\n\nTOTAL: $${orderData.total.toFixed(2)}\n\n✨ El pedido ha sido enviado a la cocina.`);
+
+            // Limpiar pedido actual
+            clearOrder();
+        }
+
+        function clearOrder() {
+            console.log('🗑️ Limpiando pedido');
+            currentOrder = [];
+            tableNumber = null;
+            orderSummary.classList.remove('show');
+            transcript.textContent = 'Aquí aparecerá lo que digas...';
+            status.textContent = 'Pedido limpiado - Presiona el micrófono para nuevo pedido';
+            status.style.color = '#667eea';
+        }
+
+        function updateHistory() {
+            if (orderHistory.length === 0) {
+                history.style.display = 'none';
+                return;
+            }
+
+            history.style.display = 'block';
+
+            let html = '';
+            orderHistory.reverse().forEach((order, index) => {
+                const time = order.timestamp.toLocaleTimeString('es-ES', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                const date = order.timestamp.toLocaleDateString('es-ES');
+
+                html += `
+                    <div class="history-item">
+                        <div class="history-time">${date} ${time} • Mesa ${order.table}</div>
+                        <strong>$${order.total.toFixed(2)}</strong> • ${order.items.length} item(s)
+                    </div>
+                `;
+            });
+            orderHistory.reverse(); // Volver al orden original
+
+            historyItems.innerHTML = html;
+        }
+
+        console.log('✅ Sistema inicializado correctamente');
+    </script>
+</body>
+
+</html>
